@@ -1,7 +1,8 @@
 const { User } = require("../../models/user");
 const bcrypt = require("bcryptjs");
-const { createError } = require("../../helpers");
+const { createError, sendMail } = require("../../helpers");
 const gravatar = require("gravatar");
+const { v4: uuidv4 } = require("uuid");
 
 const singup = async (req, res, next) => {
   const { email, password } = req.body;
@@ -12,7 +13,19 @@ const singup = async (req, res, next) => {
 
   const hashPassword = await bcrypt.hash(password, 10);
   const avatarURL = gravatar.url(email);
-  await User.create({ email, password: hashPassword, avatarURL });
+  const verificationToken = uuidv4();
+  await User.create({
+    email,
+    password: hashPassword,
+    avatarURL,
+    verificationToken,
+  });
+  const mail = {
+    to: email,
+    subject: "Підтвердження реєстрації",
+    html: `<a target=a"_blank" href="localhost:3000/api/auth/verify/${verificationToken}"> Натисніть для підтвердження email</a>`,
+  };
+  await sendMail(mail);
   res.status(201).json({
     user: {
       email,
